@@ -22,7 +22,7 @@ The app will be available at the URL printed by Vite (typically `http://localhos
 From the `server` folder:
 
 ```bash
-cd /calendar-task/server
+cd calendar-task/server
 npm install
 npm run dev
 ```
