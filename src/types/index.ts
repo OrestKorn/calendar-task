@@ -6,6 +6,7 @@ export type Task = {
   id: string
   text: string
   date: string // YYYY-MM-DD
+  order: number
 }
 
 export type TasksByDate = Record<string, Task[]>

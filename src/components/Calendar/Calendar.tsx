@@ -29,6 +29,7 @@ type CalendarProps = {
   onSelectDate?: (date: Dayjs) => void
   tasksByDate?: TasksByDate
   holidaysByDate?: HolidaysByDate
+   isLightTheme?: boolean
   onAddTask?: (date: Dayjs, text: string) => void
   onUpdateTask?: (date: Dayjs, taskId: string, text: string) => void
   onMoveTask?: (
@@ -40,20 +41,22 @@ type CalendarProps = {
   onDeleteTask?: (dateKey: string, taskId: string) => void
 }
 
-const CalendarWrapper = styled.div`
+type ViewMode = 'default' | 'month'
+
+const CalendarWrapper = styled.div<{ $light?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 20px 22px 22px;
   border-radius: 14px;
-  background: #0f172a;
-  color: #e5e7eb;
+  background: ${({ $light }) => ($light ? '#f9fafb' : '#0f172a')};
+  color: ${({ $light }) => ($light ? '#0f172a' : '#e5e7eb')};
   box-shadow:
     0 20px 25px -5px rgba(15, 23, 42, 0.5),
     0 8px 10px -6px rgba(15, 23, 42, 0.4);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   width: 100%;
-  max-width: 1360px;
+  max-width: 2040px;
   margin: 0 auto;
   box-sizing: border-box;
 
@@ -65,29 +68,54 @@ const CalendarWrapper = styled.div`
 
 const SearchRow = styled.div`
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 6px;
+  gap: 8px;
 `
 
-const SearchInput = styled.input`
+const SearchInput = styled.input<{ $light?: boolean }>`
   width: 100%;
   max-width: 320px;
   padding: 8px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5e7eb;
+  border: 1px solid ${({ $light }) =>
+    $light ? 'rgba(31, 41, 55, 0.5)' : 'rgba(148, 163, 184, 0.5)'};
+  background: ${({ $light }) => ($light ? '#f9fafb' : 'rgba(15, 23, 42, 0.9)')};
+  color: ${({ $light }) => ($light ? '#111827' : '#e5e7eb')};
   font-size: 0.85rem;
   outline: none;
 
   &::placeholder {
-    color: #6b7280;
+    color: ${({ $light }) => ($light ? '#9ca3af' : '#6b7280')};
   }
 
   &:focus {
     border-color: #22c55e;
     box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.5);
+  }
+`
+
+const ViewModeGroup = styled.div`
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  overflow: hidden;
+`
+
+const ViewModeButton = styled.button<{ $active?: boolean }>`
+  border: none;
+  background: ${({ $active }) => ($active ? 'rgba(34, 197, 94, 0.12)' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#22c55e' : '#9ca3af')};
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out;
+
+  &:not(:last-child) {
+    border-right: 1px solid rgba(148, 163, 184, 0.4);
   }
 `
 
@@ -124,10 +152,11 @@ const HeaderCenter = styled.div`
   flex: 1;
 `
 
-const NavButton = styled.button`
-  border: none;
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5e7eb;
+const NavButton = styled.button<{ $light?: boolean }>`
+  border: ${({ $light }) =>
+    $light ? '1px solid rgba(31, 41, 55, 0.6)' : 'none'};
+  background: ${({ $light }) => ($light ? '#ffffff' : '#020617')};
+  color: ${({ $light }) => ($light ? '#111827' : '#e5e7eb')};
   width: 32px;
   height: 32px;
   border-radius: 999px;
@@ -136,7 +165,10 @@ const NavButton = styled.button`
   justify-content: center;
   font-size: 1.1rem;
   cursor: pointer;
-  box-shadow: 0 6px 10px -4px rgba(15, 23, 42, 0.9);
+  box-shadow: ${({ $light }) =>
+    $light
+      ? '0 4px 8px -3px rgba(15, 23, 42, 0.25)'
+      : '0 6px 10px -4px rgba(15, 23, 42, 0.9)'};
   transition:
     transform 120ms ease-out,
     box-shadow 120ms ease-out,
@@ -145,13 +177,19 @@ const NavButton = styled.button`
 
   &:hover {
     transform: translateY(-1px);
-    background: #1f2937;
-    box-shadow: 0 10px 18px -6px rgba(15, 23, 42, 1);
+    background: ${({ $light }) => ($light ? '#f9fafb' : '#1f2937')};
+    box-shadow: ${({ $light }) =>
+      $light
+        ? '0 6px 12px -4px rgba(15, 23, 42, 0.35)'
+        : '0 10px 18px -6px rgba(15, 23, 42, 1)'};
   }
 
   &:active {
     transform: translateY(0);
-    box-shadow: 0 4px 8px -4px rgba(15, 23, 42, 0.9);
+    box-shadow: ${({ $light }) =>
+      $light
+        ? '0 3px 6px -3px rgba(15, 23, 42, 0.35)'
+        : '0 4px 8px -4px rgba(15, 23, 42, 0.9)'};
   }
 
   @media (max-width: 768px) {
@@ -196,26 +234,31 @@ const DayCell = styled.div<{
   $isSelected?: boolean
   $hasEvent?: boolean
   $isSearchMatch?: boolean
+  $light?: boolean
+  $hidden?: boolean
 }>`
   aspect-ratio: 1 / 1;
   border-radius: 10px;
   padding: 6px 6px 8px;
-  background: ${({ $isSelected, $isToday }) => {
+  background: ${({ $isSelected, $isToday, $light, $hidden }) => {
+    if ($hidden) return 'transparent'
     if ($isSelected) return 'linear-gradient(135deg, #22c55e, #16a34a)'
     if ($isToday) return 'linear-gradient(135deg, #ef4444, #b91c1c)'
-    return 'rgba(15, 23, 42, 0.9)'
+    return $light ? '#f9fafb' : 'rgba(15, 23, 42, 0.9)'
   }};
   border: 1px solid
-    ${({ $isSelected, $isToday, $hasEvent }) => {
+    ${({ $isSelected, $isToday, $hasEvent, $light, $hidden }) => {
+      if ($hidden) return 'transparent'
       if ($isSelected) return 'rgba(34, 197, 94, 0.95)'
       if ($hasEvent) return 'rgba(248, 113, 113, 0.9)'
       if ($isToday) return 'rgba(248, 113, 113, 0.95)'
-      return 'rgba(148, 163, 184, 0.15)'
+      return $light ? 'rgba(31, 41, 55, 0.25)' : 'rgba(148, 163, 184, 0.15)'
     }};
-  color: ${({ $isSelected, $isToday, $isCurrentMonth }) => {
+  color: ${({ $isSelected, $isToday, $isCurrentMonth, $light, $hidden }) => {
+    if ($hidden) return 'transparent'
     if ($isSelected || $isToday) return '#fefce8'
     if ($isToday) return '#ecfdf5'
-    if ($isCurrentMonth) return '#e5e7eb'
+    if ($isCurrentMonth) return $light ? '#111827' : '#e5e7eb'
     return '#6b7280'
   }};
   box-shadow: ${({ $isToday }) =>
@@ -295,7 +338,7 @@ const HolidayLabel = styled.div`
   text-overflow: ellipsis;
 `
 
-const TaskDropZone = styled.div<{ $isOver: boolean; $isDragging: boolean }>`
+const TaskDropZone = styled.div<{ $isOver: boolean; $isDragging: boolean; $light?: boolean }>`
   margin-top: 4px;
   padding: 4px;
   border-radius: 8px;
@@ -307,13 +350,27 @@ const TaskDropZone = styled.div<{ $isOver: boolean; $isDragging: boolean }>`
     border-color 0.15s ease,
     background-color 0.15s ease;
 
-  ${({ $isDragging, $isOver }) =>
+  ${({ $isDragging, $isOver, $light }) =>
     $isDragging
       ? `
     border: 1px dashed ${
-      $isOver ? 'rgba(77, 171, 247, 0.9)' : 'rgba(148, 163, 184, 0.35)'
+      $light
+        ? $isOver
+          ? 'rgba(31, 41, 55, 0.8)'
+          : 'rgba(31, 41, 55, 0.45)'
+        : $isOver
+          ? 'rgba(77, 171, 247, 0.9)'
+          : 'rgba(148, 163, 184, 0.35)'
     };
-    background: ${$isOver ? 'rgba(37, 99, 235, 0.12)' : 'rgba(15, 23, 42, 0.45)'};
+    background: ${
+      $light
+        ? $isOver
+          ? '#e5e7eb'
+          : '#f3f4f6'
+        : $isOver
+          ? 'rgba(37, 99, 235, 0.12)'
+          : 'rgba(15, 23, 42, 0.45)'
+    };
   `
       : `
     border: 1px dashed transparent;
@@ -340,21 +397,23 @@ const TasksList = styled.ul`
   }
 `
 
-const EmptyCellPlaceholder = styled.div`
+const EmptyCellPlaceholder = styled.div<{ $light?: boolean }>`
   font-size: 0.7rem;
-  opacity: 0.5;
+  opacity: ${({ $light }) => ($light ? 0.7 : 0.5)};
+  color: ${({ $light }) => ($light ? '#4b5563' : '#e5e7eb')};
   text-align: center;
   padding: 4px 2px 6px;
   pointer-events: none;
 `
 
-const TaskItem = styled.li<{ $isSearchMatch?: boolean }>`
+const TaskItem = styled.li<{ $isSearchMatch?: boolean; $light?: boolean }>`
   font-size: 0.7rem;
   padding: 2px 4px;
   border-radius: 4px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  color: inherit;
+  background: ${({ $light }) => ($light ? '#f9fafb' : 'rgba(15, 23, 42, 0.9)')};
+  border: 1px solid
+    ${({ $light }) => ($light ? 'rgba(31, 41, 55, 0.35)' : 'rgba(148, 163, 184, 0.3)')};
+  color: ${({ $light }) => ($light ? '#111827' : '#f9fafb')};
   cursor: grab;
   margin-bottom: 2px;
   white-space: nowrap;
@@ -391,10 +450,10 @@ const TaskText = styled.span`
   text-overflow: ellipsis;
 `
 
-const DeleteTaskButton = styled.button`
+const DeleteTaskButton = styled.button<{ $light?: boolean }>`
   border: none;
   background: transparent;
-  color: #9ca3af;
+  color: ${({ $light }) => ($light ? '#111827' : '#9ca3af')};
   cursor: pointer;
   padding: 0 2px;
   font-size: 0.8rem;
@@ -405,13 +464,14 @@ const DeleteTaskButton = styled.button`
   }
 `
 
-const TaskInput = styled.input<{ $isHidden?: boolean }>`
+const TaskInput = styled.input<{ $isHidden?: boolean; $light?: boolean }>`
   margin-top: 4px;
   width: 100%;
   border-radius: 4px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(15, 23, 42, 0.8);
-  color: #e5e7eb;
+  border: 1px solid ${({ $light }) =>
+    $light ? 'rgba(31, 41, 55, 0.35)' : 'rgba(148, 163, 184, 0.4)'};
+  background: ${({ $light }) => ($light ? '#f9fafb' : 'rgba(15, 23, 42, 0.8)')};
+  color: ${({ $light }) => ($light ? '#111827' : '#e5e7eb')};
   padding: 2px 4px;
   font-size: 0.7rem;
   outline: none;
@@ -465,6 +525,7 @@ type DayTasksCellProps = {
   search: string
   searchTick: number
   holidaysForDay: string[]
+  isLightTheme?: boolean
 }
 
 const DayTasksCell: FC<DayTasksCellProps> = ({
@@ -479,6 +540,7 @@ const DayTasksCell: FC<DayTasksCellProps> = ({
   search,
   searchTick,
   holidaysForDay,
+  isLightTheme,
 }) => {
   const [newTaskText, setNewTaskText] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -538,12 +600,17 @@ const DayTasksCell: FC<DayTasksCellProps> = ({
       {holidaysForDay.map((name) => (
         <HolidayLabel key={name}>{name}</HolidayLabel>
       ))}
-      <TaskDropZone ref={setNodeRef} $isOver={isOver} $isDragging={isDraggingTask}>
+      <TaskDropZone
+        ref={setNodeRef}
+        $isOver={isOver}
+        $isDragging={isDraggingTask}
+        $light={isLightTheme}
+      >
         {isDraggingTask && allTasks.length === 0 && !hasSearch && (
-          <EmptyCellPlaceholder>Drop task here</EmptyCellPlaceholder>
+          <EmptyCellPlaceholder $light={isLightTheme}>Drop task here</EmptyCellPlaceholder>
         )}
         {showNoResults && (
-          <EmptyCellPlaceholder>No tasks found</EmptyCellPlaceholder>
+          <EmptyCellPlaceholder $light={isLightTheme}>No tasks found</EmptyCellPlaceholder>
         )}
         <TasksList>
           <SortableContext
@@ -569,6 +636,7 @@ const DayTasksCell: FC<DayTasksCellProps> = ({
                 onDeleteTask={onDeleteTask}
                 isSearchMatch={hasSearch}
                 searchTick={searchTick}
+                lightTheme={isLightTheme}
               />
             ))}
           </SortableContext>
@@ -579,6 +647,7 @@ const DayTasksCell: FC<DayTasksCellProps> = ({
           onChange={(event) => setNewTaskText(event.target.value)}
           onKeyDown={handleNewTaskKeyDown}
           $isHidden={isDraggingTask && isOver}
+          $light={isLightTheme}
           onBlur={() => {
             const value = newTaskText.trim()
             if (value && !submitByEnterRef.current) {
@@ -607,6 +676,7 @@ type SortableTaskItemProps = {
   onDeleteTask?: (dateKey: string, taskId: string) => void
   isSearchMatch: boolean
   searchTick: number
+  lightTheme?: boolean
 }
 
 const SortableTaskItem: FC<SortableTaskItemProps> = ({
@@ -623,6 +693,7 @@ const SortableTaskItem: FC<SortableTaskItemProps> = ({
   onDeleteTask,
   isSearchMatch,
   searchTick: _searchTick, // unused but keeps re-mount semantics via key
+  lightTheme,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -645,6 +716,7 @@ const SortableTaskItem: FC<SortableTaskItemProps> = ({
       style={style}
       {...attributes}
       $isSearchMatch={isSearchMatch}
+      $light={lightTheme}
     >
       {isEditing ? (
         <InlineEditInput
@@ -676,6 +748,7 @@ const SortableTaskItem: FC<SortableTaskItemProps> = ({
               event.stopPropagation()
               onDeleteTask?.(dateKey, task.id)
             }}
+            $light={lightTheme}
           >
             ×
           </DeleteTaskButton>
@@ -708,6 +781,7 @@ export const Calendar: FC<CalendarProps> = ({
   onSelectDate,
   tasksByDate,
   holidaysByDate,
+  isLightTheme,
   onAddTask,
   onUpdateTask,
   onMoveTask,
@@ -715,6 +789,7 @@ export const Calendar: FC<CalendarProps> = ({
 }) => {
   const [search, setSearch] = useState('')
   const [searchTick, setSearchTick] = useState(0)
+  const [viewMode, setViewMode] = useState<ViewMode>('default')
 
   const matrix = generateMonthMatrix(currentMonth)
 
@@ -781,27 +856,54 @@ export const Calendar: FC<CalendarProps> = ({
   const hasSearch = normalizedSearch.length > 0
 
   return (
-    <CalendarWrapper>
+    <CalendarWrapper $light={isLightTheme}>
       <SearchRow>
         <SearchInput
           type="text"
           placeholder="Search tasks..."
           value={search}
+          $light={isLightTheme}
           onChange={(event) => {
             setSearch(event.target.value)
             setSearchTick((prev) => prev + 1)
           }}
         />
+        <ViewModeGroup>
+          <ViewModeButton
+            type="button"
+            $active={viewMode === 'default'}
+            onClick={() => setViewMode('default')}
+          >
+            Default
+          </ViewModeButton>
+          <ViewModeButton
+            type="button"
+            $active={viewMode === 'month'}
+            onClick={() => setViewMode('month')}
+          >
+            Month
+          </ViewModeButton>
+        </ViewModeGroup>
       </SearchRow>
       <CalendarHeader>
-        <NavButton type="button" onClick={onPrevMonth} aria-label="Previous month">
+        <NavButton
+          type="button"
+          onClick={onPrevMonth}
+          aria-label="Previous month"
+          $light={isLightTheme}
+        >
           ‹
         </NavButton>
         <HeaderCenter>
           <MonthLabel>{monthName}</MonthLabel>
           <YearLabel>{yearNumber}</YearLabel>
         </HeaderCenter>
-        <NavButton type="button" onClick={onNextMonth} aria-label="Next month">
+        <NavButton
+          type="button"
+          onClick={onNextMonth}
+          aria-label="Next month"
+          $light={isLightTheme}
+        >
           ›
         </NavButton>
       </CalendarHeader>
@@ -818,10 +920,12 @@ export const Calendar: FC<CalendarProps> = ({
         <DaysGridWrapper key={currentMonth.format('YYYY-MM')}>
           <DaysGrid>
             {matrix.map((week) =>
-              week.map((date, dayIndex) => {
+              week.map((date) => {
                 const today = isToday(date)
                 const inCurrentMonth = isSameMonth(date, currentMonth)
-                const isWeekend = dayIndex === 5 || dayIndex === 6
+                const isHidden = viewMode === 'month' && !inCurrentMonth
+                const weekdayIndex = (date.day() + 6) % 7
+                const isWeekend = weekdayIndex === 5 || weekdayIndex === 6
                 const isSelected = selectedDate ? date.isSame(selectedDate, 'day') : false
                 const dateKey = date.format('YYYY-MM-DD')
                 const tasksForDay = tasksByDate?.[dateKey] ?? []
@@ -829,40 +933,46 @@ export const Calendar: FC<CalendarProps> = ({
                 const hasEvent = holidaysForDay.length > 0
 
                 const hasSearchMatch =
+                  !isHidden &&
                   hasSearch &&
                   tasksForDay.some((task) =>
                     task.text.toLowerCase().includes(normalizedSearch),
                   )
 
                 const handleClick = () => {
-                  if (onSelectDate) onSelectDate(date)
+                  if (onSelectDate && !isHidden) onSelectDate(date)
                 }
 
                 return (
                   <DayCell
                     key={hasSearchMatch ? `${dateKey}-${searchTick}` : dateKey}
-                    $isToday={today}
+                    $isToday={!isHidden && today}
                     $isCurrentMonth={inCurrentMonth}
                     $isWeekend={isWeekend}
-                    $isSelected={isSelected}
-                    $hasEvent={hasEvent}
+                    $isSelected={!isHidden && isSelected}
+                    $hasEvent={!isHidden && hasEvent}
                     $isSearchMatch={hasSearchMatch}
+                    $light={isLightTheme}
+                    $hidden={isHidden}
                     onClick={handleClick}
                   >
-                    <DayTasksCell
-                      date={date}
-                      dateKey={dateKey}
-                      tasks={tasksForDay}
-                      onAddTask={onAddTask}
-                      onUpdateTask={onUpdateTask}
-                      onDeleteTask={onDeleteTask}
-                      isDraggingTask={Boolean(activeTaskId)}
-                      search={search}
-                      searchTick={searchTick}
-                      holidaysForDay={holidaysForDay}
-                    >
-                      <DayNumber $isToday={today}>{date.date()}</DayNumber>
-                    </DayTasksCell>
+                    {!isHidden && (
+                      <DayTasksCell
+                        date={date}
+                        dateKey={dateKey}
+                        tasks={tasksForDay}
+                        onAddTask={onAddTask}
+                        onUpdateTask={onUpdateTask}
+                        onDeleteTask={onDeleteTask}
+                        isDraggingTask={Boolean(activeTaskId)}
+                        search={search}
+                        searchTick={searchTick}
+                        holidaysForDay={holidaysForDay}
+                        isLightTheme={isLightTheme}
+                      >
+                        <DayNumber $isToday={today}>{date.date()}</DayNumber>
+                      </DayTasksCell>
+                    )}
                   </DayCell>
                 )
               }),
