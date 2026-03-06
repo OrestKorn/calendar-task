@@ -10,7 +10,7 @@
 From the project root:
 
 ```bash
-cd /Users/franklinator/Desktop/calendar-task
+cd calendar-task
 npm install
 npm run dev
 ```
@@ -22,7 +22,7 @@ The app will be available at the URL printed by Vite (typically `http://localhos
 From the `server` folder:
 
 ```bash
-cd /Users/franklinator/Desktop/calendar-task/server
+cd /calendar-task/server
 npm install
 npm run dev
 ```
